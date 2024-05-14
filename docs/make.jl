@@ -1,3 +1,3 @@
-using Documenter, MyProject
+using Documenter, Losses
 
 makedocs(sitename="Early-DP-Synthesis")
