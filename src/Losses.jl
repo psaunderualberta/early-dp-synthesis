@@ -39,12 +39,8 @@ function unbalanced_dist(tree, dataset::Dataset{T,L}, options)::L where {T,L}
 	ltm = length(prediction[prediction .<= mn])
 	gtm = length(prediction[prediction .>= mn])
 
-	# Guard against division by 0
-	if ltm == gtm
-		return L(Inf)
-	end
-
-	return 1 / abs(ltm - gtm)
+	# 1e-5 to account for possible division by 0
+	return length(prediction) / (abs(ltm - gtm) + 1e-5)
 end
 
 end

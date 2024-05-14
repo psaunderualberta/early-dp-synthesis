@@ -18,12 +18,13 @@ begin
 	y = y .+ randn(10000) .* 1e-3
 
 	# Define uniform
-	unif(a::T, b::T) where {T} = a < b ? rand(Uniform(a, b)) : T(NaN) 
+	unif(a::T, b::T) where {T} = a < b ? rand(Uniform(a, b)) : T(NaN)
+    normal(a::T, b::T) where {T} = b > 0 ? rand(Normal(a, b)) : T(NaN)
 	
 	model = SRRegressor(
 	    save_to_file=false,
 	    niterations=50,
-	    binary_operators=[+, -, unif],
+	    binary_operators=[+, -, unif, normal],
 		loss_function=unbalanced_dist,
 		maxdepth=3,
 		complexity_of_variables=5
