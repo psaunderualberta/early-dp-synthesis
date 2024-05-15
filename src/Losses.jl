@@ -6,6 +6,16 @@ export zero_mean_dist,
 using SymbolicRegression: Dataset, eval_tree_array
 using Distributions
 
+const NITER = 100
+
+function get_accuracy_distribution(tree, dataset::Dataset{T,L}, options)::Float64 where {T,L}
+	distribution, flag = eval_tree_array(tree, dataset.X, options)
+	if !flag 
+		return Float64(Inf)
+	end
+	return mean(distribution)
+end
+
 
 function zero_mean_dist(tree, dataset::Dataset{T,L}, options)::L where {T,L}
 	"""
