@@ -37,13 +37,7 @@ begin
     end
     
     # ╔═╡ 8669029b-31c9-4317-8c6c-c84120e5c9d2
-    report(mach)
-    
-    # ╔═╡ 7e39ec65-ce3c-46da-a835-e7905f415bc0
-    predict(mach, X)
-    
-    # ╔═╡ 1eb2f2db-11c8-42ca-9138-3c37e15f242a
-    exp.([5, 2])
+    println(report(mach))
 end
 
 end

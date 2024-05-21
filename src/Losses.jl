@@ -6,7 +6,7 @@ export zero_mean_dist,
 using SymbolicRegression: Dataset, eval_tree_array
 using Distributions
 
-const NITER = 100
+# TODO: Perhaps make use of optuna later
 
 function get_accuracy_distribution(tree, dataset::Dataset{T,L}, options)::Float64 where {T,L}
 	distribution, flag = eval_tree_array(tree, dataset.X, options)
@@ -14,6 +14,17 @@ function get_accuracy_distribution(tree, dataset::Dataset{T,L}, options)::Float6
 		return Float64(Inf)
 	end
 	return mean(distribution)
+end
+
+
+function estimate_varepsilon_kde(pdf1::AbstractKDE, pdf2::AbstractKDE, data::AbstractVector{T})::Float64
+	# Totally arbitrary choice for min & max of sampling
+	# TODO: Since we're using kdes, we should probably make use of a distribution other than the gaussian
+	datastd = std(data)
+	sample_min = min(data) - datastd;
+	sample_max = max(data) + datastd;
+	
+	return 0.0
 end
 
 
