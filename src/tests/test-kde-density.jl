@@ -9,7 +9,7 @@ using Distributions
 
 function test_kde()
     x = rand(Normal(0, 1), 10000)
-    
+
     fn = kde(x)
 end
 
