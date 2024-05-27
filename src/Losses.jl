@@ -8,6 +8,9 @@ using SymbolicRegression: Dataset, eval_tree_array
 using Distributions
 using KernelDensity
 
+include("Constants.jl")
+using .Constants
+
 # Type alias for KDEs
 KDE = Union{UnivariateKDE,BivariateKDE}
 
@@ -22,7 +25,7 @@ function get_accuracy_distribution(tree, dataset::Dataset{T,L}, options)::Float6
 end
 
 
-function estimate_varepsilon_kde(kde1::KDE, kde2::KDE, data::AbstractVector{T}, num_iters::Int64=1000)::Float64 where {T}
+function estimate_varepsilon_kde(kde1::KDE, kde2::KDE, sampler::ContinuousUnivariateDistribution, num_iters::Int64=1000)::Float64 where {T}
     """
     	estimate_varepsilon_kde(kde1, kde2, data, num_iters)
 
@@ -32,7 +35,7 @@ function estimate_varepsilon_kde(kde1::KDE, kde2::KDE, data::AbstractVector{T}, 
     	Parameters:
     	- kde1: The first KDE
     	- kde2: The second KDE
-    	- data: The data used to train the KDEs
+    	- sampler: The distribution from which to sample data when estimating the value
     	- num_iters: The number of iterations to sample from the distributions
 
     	Returns:
@@ -40,15 +43,11 @@ function estimate_varepsilon_kde(kde1::KDE, kde2::KDE, data::AbstractVector{T}, 
     """
     # Totally arbitrary choice for min & max of sampling
     # TODO: Since we're using kdes, we should probably make use of a distribution other than the gaussian
-    datastd = std(data)
-    sample_min = min(data)
-    sample_max = max(data)
-    dist = Uniform(sample_min, sample_max)
     vareps = Float64(Inf)
 
     # Use random sampling to estimate varepsilon
     for _ in 1:num_iters
-        x = rand(dist)
+        x = rand(sampler)
 
         diff = pdf(kde1, x) - pdf(kde2, x)
         vareps = max(vareps, max(diff, 1 / diff))
@@ -59,12 +58,35 @@ end
 
 
 function privacy_loss(tree, dataset::Dataset{T,L}, options)::L where {T,L}
+	# TODO: Possibly use different samples to estimate privacy vs. accuracy,
+	# or the different kdes?
+
     prediction, flag = eval_tree_array(tree, dataset.X, options)
 
     # Either evaluation failed, or the distribution is approximately a constant
     if !flag || std(prediction) < 1e-5
         return L(Inf)
     end
+
+	# Get original distributions
+	kde = kde(prediction)
+
+	# Dist of data when shifted by maximum possible amount.
+	varnames = dataset.variable_names
+	sensitivity_col_idx = findfirst(item -> item == SENSITIVITY_COLUMN_NAME, varnames)
+	sensitivity = dataset.X[sensitivity_col_idx, 1]  # The column is the same value
+	sens_kde = kde(prediction .- sensitivity)
+
+	# Get the method of sampling
+	sampler = Uniform(min(prediction), max(prediction))
+
+	# Estimate the privacy loss
+	varepsilon = estimate_varepsilon_kde(kde, sens_kde, sampler)
+
+	# Get the accuracy
+	accuracy = mean(prediction)
+
+	# Combine privacy & accuracy
 end
 
 
