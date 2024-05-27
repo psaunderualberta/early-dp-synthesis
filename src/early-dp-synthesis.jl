@@ -5,11 +5,7 @@ using Distributions
 using SymbolicRegression
 using ArgParse
 
-include("Common.jl")
-using .Common
-
 include("Losses.jl")
-using .Losses
 
 function parse_commandline()
     s = ArgParseSettings()
@@ -32,10 +28,10 @@ function parse_commandline()
 end
 
 function main()
-    args = parse_commandline()
-    accest = haskey(accuracy_estimators, args["accuracy"]) ? accuracy_estimators[args["accuracy"]] : error("A")
-    privest = haskey(privacy_estimators, args["privacy"]) ? privacy_estimators[args["privacy"]] : error("B")
-    combest = haskey(combiners, args["combiner"]) ? combiners[args["combiner"]] : error("C")
+    # args = parse_commandline()
+    # accest = haskey(accuracy_estimators, args["accuracy"]) ? accuracy_estimators[args["accuracy"]] : error("A")
+    # privest = haskey(privacy_estimators, args["privacy"]) ? privacy_estimators[args["privacy"]] : error("B")
+    # combest = haskey(combiners, args["combiner"]) ? combiners[args["combiner"]] : error("C")
     
     # Dataset with two named features:"
     X = (zero=fill(0.0, 10000),)
@@ -50,14 +46,13 @@ function main()
     unif(a::T, b::T) where {T} = a < b ? rand(Uniform(a, b)) : T(NaN)
     normal(a::T, b::T) where {T} = b > 0 ? rand(Normal(a, b)) : T(NaN)
 
-    loss(tree, dataset, options) = privacy_loss(accest, privest, combest, tree, dataset, options)
+    # loss(tree, dataset, options) = privacy_loss(accest(), privest(), combest(), tree, dataset, options)
     model = SRRegressor(
         save_to_file=false,
         niterations=50,
         binary_operators=[+, -, unif, normal],
-        loss_function=loss,
+        loss_function=lf,
         maxdepth=3,
-        complexity_of_variables=5
     )
 
     begin

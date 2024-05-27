@@ -6,5 +6,5 @@ function combine(_::LinearCombiner, accuracy::Float64, epsilon::Float64, params:
         error("Linear Combinator does not have required parameter 'lambda'!")
     end 
 
-    return accuracy + epsilon * params["lambda"]
+    return abs(accuracy + epsilon * params["lambda"])
 end

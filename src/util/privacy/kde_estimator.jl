@@ -4,15 +4,14 @@ using Distributions
 include("../misc/eval_tree.jl")
 
 struct KDEPrivacyEstimator <: PrivacyEstimator
-    use_predictions::Bool
 end
 
 
-function varepsilon(e::KDEPrivacyEstimator, tree, dataset::Dataset{T,L}, options, prediction::AbstractVector{T}, params::Dict)::L where {T,L}
+function varepsilon(_::KDEPrivacyEstimator, tree, dataset::Dataset{T,L}, options, prediction::AbstractVector{T}, params::Dict)::L where {T,L}
 
     # function varepsilon(kde1::KDE, kde2::KDE, sampler::ContinuousUnivariateDistribution, num_iters::Int64=1000)::Float64 where {T}
 
-    if !e.use_predictions
+    if haskey(params, "use_predictions") && params["use_predictions"]
         prediction = eval(tree, dataset, options)
     end
 

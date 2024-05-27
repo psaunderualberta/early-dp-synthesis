@@ -1,16 +1,6 @@
-module Common
-
-export accuracy_estimators,
-    privacy_estimators,
-    combiners,
-    AccuracyEstimator,
-    PrivacyEstimator,
-    Combiner
-
 using SymbolicRegression
 
 include("Constants.jl")
-using .Constants
 
 abstract type PrivacyEstimator end
 abstract type AccuracyEstimator end
@@ -23,10 +13,8 @@ function recursive_include(path::String)
     """
     items = sort(readdir(path))
 
-
     for item = items
         newpath = joinpath(path, item)
-
 
         if isdir(newpath)
             recursive_include(newpath)
@@ -38,6 +26,7 @@ end
 
 recursive_include(joinpath(@__DIR__, "util"))
 
+# Publicly exposed estimators
 accuracy_estimators = Dict(
     "mean" => MeanAccuracyEstimator
 )
@@ -51,6 +40,3 @@ combiners = Dict(
     "linear" => LinearCombiner,
     "product" => ProductCombiner
 )
-
-
-end
