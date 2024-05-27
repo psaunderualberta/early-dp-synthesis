@@ -1,8 +1,11 @@
-module 
+module Common
 
 export accuracy_estimators,
     privacy_estimators,
-    combiners
+    combiners,
+    AccuracyEstimator,
+    PrivacyEstimator,
+    Combiner
 
 using SymbolicRegression
 

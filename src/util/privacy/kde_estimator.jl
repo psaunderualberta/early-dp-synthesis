@@ -1,8 +1,12 @@
+using KernelDensity
+using Distributions
+
+include("../misc/eval_tree.jl")
+
 struct KDEPrivacyEstimator <: PrivacyEstimator
     use_predictions::Bool
 end
 
-include("../misc/eval_tree.jl")
 
 function varepsilon(e::KDEPrivacyEstimator, tree, dataset::Dataset{T,L}, options, prediction::AbstractVector{T}, params::Dict)::L where {T,L}
 
