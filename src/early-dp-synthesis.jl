@@ -1,4 +1,5 @@
-module Synthesis
+using Pkg; Pkg.activate(joinpath(@__DIR__, ".."))
+Pkg.instantiate();
 
 using MLJ
 using Distributions
@@ -39,12 +40,12 @@ function main()
     # and one target:
     y = @. 2 * cos(X.zero * 23.5)
 
-    # with some noise:
-    y = y .+ randn(10000) .* 1e-3
+    # Just need to specify y shape
+    y = zeros(10000, 1,) .* 0.0
 
     # Define uniform
-    unif(a::T, b::T) where {T} = a < b ? rand(Uniform(a, b)) : T(NaN)
-    normal(a::T, b::T) where {T} = b > 0 ? rand(Normal(a, b)) : T(NaN)
+    unif(a, b) = a < b ? rand(Uniform(a, b)) : NaN
+    normal(a, b) = b > 0 ? rand(Normal(a, b)) : NaN
 
     # loss(tree, dataset, options) = privacy_loss(accest(), privest(), combest(), tree, dataset, options)
     model = SRRegressor(
@@ -66,5 +67,3 @@ function main()
 end
 
 main()
-
-end
