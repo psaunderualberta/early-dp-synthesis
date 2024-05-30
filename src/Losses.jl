@@ -16,7 +16,7 @@ function privacy_loss(accest, privest, combest, tree, dataset::Dataset{T,L}, opt
             st = string_tree(tree, options)
 
             # TODO: revert from hardcoding the values of the arguments
-            weird = (contains(st, "unif") || contains(st, "normal")) && length(unique(predictions)) == 1
+            weird = any(dist -> contains(st, dist), ["unif", "normal", "laplace"]) && length(unique(predictions)) == 1
             if weird
                 println(string_tree(tree, options), " | ", predictions[1:5], " | ", std(predictions))
                 exit("HELP")
