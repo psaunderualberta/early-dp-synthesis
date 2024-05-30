@@ -29,28 +29,27 @@ function parse_commandline()
 end
 
 function main()
-    # args = parse_commandline()
-    # accest = haskey(accuracy_estimators, args["accuracy"]) ? accuracy_estimators[args["accuracy"]] : error("A")
-    # privest = haskey(privacy_estimators, args["privacy"]) ? privacy_estimators[args["privacy"]] : error("B")
-    # combest = haskey(combiners, args["combiner"]) ? combiners[args["combiner"]] : error("C")
+    args = parse_commandline()
+    accest = haskey(accuracy_estimators, args["accuracy"]) ? accuracy_estimators[args["accuracy"]] : error("A")
+    privest = haskey(privacy_estimators, args["privacy"]) ? privacy_estimators[args["privacy"]] : error("B")
+    combest = haskey(combiners, args["combiner"]) ? combiners[args["combiner"]] : error("C")
     
     # Dataset with two named features:"
-    n = 100
+    n = 10000
     X = (zero=zeros(n),)
 
     y = @. zeros(Float64, n)
 
     # Define uniform
     unif(a::T, b::T) where {T} = a < b ? rand(Uniform(a, b)) : T(NaN)
-    # normal(a, b) = b > 0 ? rand(Normal(a, b)) : NaN
+    normal(a, b) = b > 0 ? rand(Normal(a, b)) : NaN
 
-    # loss(tree, dataset, options) = privacy_loss(accest(), privest(), combest(), tree, dataset, options)
+    loss(tree, dataset, options) = privacy_loss(accest(), privest(), combest(), tree, dataset, options)
     model = SRRegressor(;
         save_to_file=false,
-        parallelism=:serial,
         niterations=5,
-        binary_operators=[+, -, unif],
-        loss_function=lf,
+        binary_operators=[+, -, unif, normal],
+        loss_function=loss,
         maxdepth=10,
     )
 
