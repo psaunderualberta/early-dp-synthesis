@@ -27,16 +27,17 @@ end
 recursive_include(joinpath(@__DIR__, "util"))
 
 # Publicly exposed estimators
-accuracy_estimators = Dict(
-    "mean" => MeanAccuracyEstimator
+const accuracy_estimators = Dict(
+    "linear" => LinearAccuracyEstimator,
+    "quadratic" => QuadraticAccuracyEstimator
 )
 
-privacy_estimators = Dict(
+const privacy_estimators = Dict(
     "kde" => KDEPrivacyEstimator,
     "none" => NonPrivacyEstimator
 )
 
-combiners = Dict(
+const combiners = Dict(
     "linear" => LinearCombiner,
     "product" => ProductCombiner
 )

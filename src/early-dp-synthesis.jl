@@ -1,5 +1,10 @@
 using Distributed
 
+# Precompile in main thread
+using Pkg
+Pkg.activate(joinpath(@__DIR__, ".."))
+Pkg.instantiate()
+
 @everywhere begin
     using Pkg
     Pkg.activate(joinpath(@__DIR__, ".."))
@@ -60,7 +65,7 @@ function parse_commandline()
         "--accuracy"
             help = "The method of computing the accuracy of a distribution"
             arg_type = String
-            default = "mean"
+            default = "quadratic"
         "--privacy"
             help = "The method of computing the privacy loss for a distribution"
             arg_type = String
