@@ -35,25 +35,23 @@ function main()
     # combest = haskey(combiners, args["combiner"]) ? combiners[args["combiner"]] : error("C")
     
     # Dataset with two named features:"
-    X = (zero=fill(0.0, 10000),)
+    n = 100
+    X = (zero=zeros(n),)
 
-    # and one target:
-    y = @. 2 * cos(X.zero * 23.5)
-
-    # Just need to specify y shape
-    y = zeros(10000, 1,) .* 0.0
+    y = @. zeros(Float64, n)
 
     # Define uniform
-    unif(a, b) = a < b ? rand(Uniform(a, b)) : NaN
-    normal(a, b) = b > 0 ? rand(Normal(a, b)) : NaN
+    unif(a::T, b::T) where {T} = a < b ? rand(Uniform(a, b)) : T(NaN)
+    # normal(a, b) = b > 0 ? rand(Normal(a, b)) : NaN
 
     # loss(tree, dataset, options) = privacy_loss(accest(), privest(), combest(), tree, dataset, options)
-    model = SRRegressor(
+    model = SRRegressor(;
         save_to_file=false,
-        niterations=50,
-        binary_operators=[+, -, unif, normal],
+        parallelism=:serial,
+        niterations=5,
+        binary_operators=[+, -, unif],
         loss_function=lf,
-        maxdepth=3,
+        maxdepth=10,
     )
 
     begin
