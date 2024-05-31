@@ -1,6 +1,7 @@
 using SymbolicRegression
 
 include("Constants.jl")
+using .Constants
 
 abstract type PrivacyEstimator end
 abstract type AccuracyEstimator end

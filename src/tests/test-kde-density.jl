@@ -8,9 +8,11 @@ using KernelDensity
 using Distributions
 
 function test_kde()
-    x = rand(Normal(0, 1), 10000)
+    x = rand(Uniform(0, 1), 10000)
 
     fn = kde(x)
+    println(minimum(x), " | ", maximum(x))
+    println(fn)
 end
 
 test_kde()
