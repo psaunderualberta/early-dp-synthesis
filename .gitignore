@@ -24,3 +24,7 @@ docs/site/
 # Manifest.toml
 
 .vscode/
+
+# Compute Canada & Sbatch scripts
+slurm/
+cc/
