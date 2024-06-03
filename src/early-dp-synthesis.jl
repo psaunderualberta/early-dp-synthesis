@@ -50,7 +50,7 @@ function main(args)
         binary_operators=[+, -, unif],
         unary_operators=[],
         loss_function=loss,
-        maxdepth=10,
+        maxdepth=3,
     )
 
     # Train model

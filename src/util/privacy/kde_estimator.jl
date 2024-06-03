@@ -36,7 +36,7 @@ function varepsilon(est::KDEPrivacyEstimator, tree, dataset::Dataset{T,L}, optio
     for _ in 1:num_iters
         x = rand(sampler)
 
-        model_prob = pdf(model, x)
+        model_prob = pdf(model, x) + 1e-5
         @assert model_prob > 0 "$(string_tree(tree, options)), $x, $sampler, $prediction"
 
         sens_model_prob = pdf(sens_model, x)
