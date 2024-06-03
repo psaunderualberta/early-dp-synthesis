@@ -2,6 +2,6 @@ module Constants
 
 export SENSITIVITY_COLUMN_NAME
 
-const SENSITIVITY_COLUMN_NAME = "sensivity"
+const SENSITIVITY_COLUMN_NAME = "sensitivity"
 
 end
