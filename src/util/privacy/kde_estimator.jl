@@ -18,28 +18,30 @@ function varepsilon(est::KDEPrivacyEstimator, tree, dataset::Dataset{T,L}, optio
     # Get original distributions
     limits = (minimum(prediction), maximum(prediction))
     model = kde(prediction; boundary=limits)
+    model_ik = InterpKDE(model)
 
     # Dist of data when shifted by maximum possible amount.
     varnames = dataset.variable_names
     sensitivity_col_idx = findfirst(item -> item == SENSITIVITY_COLUMN_NAME, varnames)
     sensitivity = dataset.X[sensitivity_col_idx, 1]  # The column is the same value
     sens_model = kde(prediction .- sensitivity)
+    sens_model_ik = InterpKDE(sens_model)
 
     # Get the method of sampling
-    sampler = Uniform(limits[1], limits[2])
+    resolution = 1000
 
     # Totally arbitrary choice for min & max of sampling
     # TODO: Since we're using kdes, we should probably make use of a distribution other than the gaussian
     vareps = L(0)
 
     # Use random sampling to estimate varepsilon
-    for _ in 1:num_iters
-        x = rand(sampler)
-
-        model_prob = pdf(model, x) + 1e-5
+    for x in limits[1]:1/resolution:limits[2]
+        model_prob = pdf(model_ik, x) + 1e-5
         @assert model_prob > 0 "$(string_tree(tree, options)), $x, $sampler, $prediction"
 
-        sens_model_prob = pdf(sens_model, x)
+        # If this datapoint is impossible under neighbouring distributions,
+        # then the privacy parameter (varepsilon) is infinite
+        sens_model_prob = pdf(sens_model_ik, x)
         if sens_model_prob == 0
             return L(Inf)
         end

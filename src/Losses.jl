@@ -28,13 +28,9 @@ function privacy_loss(accest, privest, combest, tree, dataset::Dataset{T,L}, opt
 
     # TODO: Replace dicts with args passed in
     acc = accuracy(accest, predictions)
+    @assert isfinite(acc) "$(string_tree(tree, options)), $(predictions[1:3]), $acc"
+
     vareps = varepsilon(privest, tree, dataset, options, predictions, Dict())
-
-    if !isfinite(vareps)
-        println(string_tree(tree, options), " | ", minimum(predictions), " | ", maximum(predictions))
-        return L(Inf)
-    end
-
     loss = combine(combest, acc, vareps, Dict("lambda" => 5))
 
     @assert isfinite(sum(predictions)) "$acc, $vareps, $loss"

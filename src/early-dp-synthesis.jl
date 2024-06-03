@@ -30,13 +30,13 @@ function main(args)
         "zero" => zeros(n),
         SENSITIVITY_COLUMN_NAME => fill(args["sensitivity"], n),
     )
-    X =  NamedTuple(((Symbol(key), value) for (key, value) in d))
 
+    X =  NamedTuple(((Symbol(key), value) for (key, value) in d))
     y = @. zeros(Float64, n)
 
     # Define uniform
     unif(a::T, b::T) where {T} = a < b ? rand(Uniform(a, b)) : T(NaN)
-    # normal(a, b) = b > 0 ? rand(Normal(a, b)) : NaN
+    normal(a, b) = b > 0 ? rand(Normal(a, b)) : NaN
     # laplace(b) = b > 0 ? rand(Laplace(0, b)) : NaN
 
     # Define loss function
@@ -47,15 +47,16 @@ function main(args)
     model = SRRegressor(;
         save_to_file=false,
         niterations=5,
-        binary_operators=[+, -, unif],
+        binary_operators=[+, -, unif, normal],
         unary_operators=[],
         loss_function=loss,
-        maxdepth=3,
+        maxdepth=10,
+        progress=true,
     )
 
     # Train model
     mach = machine(model, X, y)
-    fit!(mach)
+    fit!(mach)  # Not sure why this says 'possible method call error'
 
     # Print report
     println(report(mach))
