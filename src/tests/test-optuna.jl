@@ -4,6 +4,8 @@ Tests that the installation of optuna is performing as intended
 https://juliamanifolds.github.io/ManoptExamples.jl/stable/examples/HyperparameterOptimization/#Summary
 """
 
+# Not currently using optuna, but might do so in the future. 
+
 using PyCall
 
 # Second argument is fall-back to installation from conda

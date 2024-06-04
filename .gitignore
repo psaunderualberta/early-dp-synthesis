@@ -29,4 +29,8 @@ docs/site/
 slurm/
 cc/
 
+# Ignore the environment file
 Manifest.toml
+
+# Logs
+logs/

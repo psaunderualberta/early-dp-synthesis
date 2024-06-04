@@ -16,10 +16,13 @@ end
     using Distributions
     using SymbolicRegression
     using ArgParse
+    using Dates
 
     include("Losses.jl")
 
     function main(args)
+        println("Running with args: ")
+        display(args)
         accest = haskey(accuracy_estimators, args["accuracy"]) ? accuracy_estimators[args["accuracy"]] : error("A")
         privest = haskey(privacy_estimators, args["privacy"]) ? privacy_estimators[args["privacy"]] : error("B")
         combest = haskey(combiners, args["combiner"]) ? combiners[args["combiner"]] : error("C")
@@ -29,7 +32,6 @@ end
 
         # Ablee to use variables as keys
         d = Dict(
-            "zero" => zeros(n),
             SENSITIVITY_COLUMN_NAME => fill(args["sensitivity"], n),
         )
 
@@ -45,12 +47,23 @@ end
         loss(tree, dataset, options) = privacy_loss(accest(), privest(), combest(), tree, dataset, options)
         processes = nprocs() > 1 ? procs()[2:end] : procs()
 
+        # Define output file, creating dirs if necessary
+        if args["save"]
+            args["outpath"] = isdir(args["outpath"]) ? args["outpath"] : mkpath(args["outpath"])
+            outfile = joinpath(args["outpath"], args["outfile"])
+            touch(outfile)
+            @assert isfile(outfile) "Could not create file at $(outfile)"
+        else
+            outfile = nothing
+        end
+
         # Define model
         model = SRRegressor(;
-            save_to_file=false,
+            save_to_file=args["save"],
+            output_file=outfile,
             parallelism=:multiprocessing,
             procs=processes,
-            timeout_in_seconds=60 * 10, # 10 minutes
+            timeout_in_seconds=args["timeout"], # 10 minutes
             # niterations=5,
             binary_operators=[+, -, normal, unif],
             unary_operators=[laplace],
@@ -71,6 +84,7 @@ end
 
 function parse_commandline()
     s = ArgParseSettings()
+    nowtime = Dates.format(now(), "yyyy-mm-dd-HH-MM")
     @add_arg_table s begin
         "--accuracy"
             help = "The method of computing the accuracy of a distribution"
@@ -91,7 +105,18 @@ function parse_commandline()
         "--timeout"
             help = "The maximum time to run the symbolic regression model, in seconds"
             arg_type = Int
-            default = 60 * 10  # 10 minutes
+            default = 60 # 1 minute
+        "--save"
+            help = "Whether to save the output of synthesis to a file"
+            action = :store_true
+        "--outpath"
+            help = "The directory to write the output of synthesis to. '--save' must be set to true for this to take effect."
+            arg_type = String
+            default = "logs"
+        "--outfile"
+            help = "The file to write the output of synthesis to. '--save' must be set to true for this to take effect."
+            arg_type = String
+            default = "$(nowtime)-output.log"
     end
 
     return parse_args(s)
