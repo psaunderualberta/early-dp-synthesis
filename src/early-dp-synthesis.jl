@@ -25,7 +25,7 @@ end
         combest = haskey(combiners, args["combiner"]) ? combiners[args["combiner"]] : error("C")
 
         # Dataset with two named features
-        n = 1000
+        n = 10000
 
         # Ablee to use variables as keys
         d = Dict(
@@ -39,7 +39,7 @@ end
         # Define uniform
         unif(a::T, b::T) where {T} = a < b ? rand(Uniform(a, b)) : T(NaN)
         normal(a, b) = b > 0 ? rand(Normal(a, b)) : NaN
-        # laplace(b) = b > 0 ? rand(Laplace(0, b)) : NaN
+        laplace(b) = b > 0 ? rand(Laplace(0, b)) : NaN
 
         # Define loss function
         loss(tree, dataset, options) = privacy_loss(accest(), privest(), combest(), tree, dataset, options)
@@ -52,8 +52,8 @@ end
             procs=processes,
             timeout_in_seconds=60 * 10, # 10 minutes
             # niterations=5,
-            binary_operators=[+, -, unif, normal],
-            unary_operators=[],
+            binary_operators=[+, -, normal, unif],
+            unary_operators=[laplace],
             loss_function=loss,
             maxdepth=10,
             progress=true,
