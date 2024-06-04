@@ -28,3 +28,5 @@ docs/site/
 # Compute Canada & Sbatch scripts
 slurm/
 cc/
+
+Manifest.toml
