@@ -15,6 +15,7 @@ end
     using MLJ
     using Distributions
     using SymbolicRegression
+    using DynamicExpressions: string_tree
     using ArgParse
     using Dates
 
@@ -75,9 +76,11 @@ end
 
         # Print report
         rep = report(mach)
+        println(rep)
+        nowtime = Dates.format(now(), "yyyy-mm-dd-HH-MM")
         if args["save"]
             # Generate plots
-            if isempty(args["plots"])
+            if isnothing(args["plots"])
                 args["plots"] = PLOTTING_FUNCTIONS
             end
 
@@ -87,7 +90,7 @@ end
 
             num_equations = length(rep.equations)
             for i in 1:num_equations
-                equation = rep.equations[i]
+                equation = string_tree(rep.equations[i], model)  # TODO: Where are the operators stored?
                 complexity = rep.complexities[i]
 
                 # Sample from the equation
@@ -150,8 +153,9 @@ function parse_commandline()
             default = "plots"
         "--plots"
             help = "The specific plots to generate. If not set, all plots will be generated. '--save' must be set to true for this to take effect."
-            nargs = "*"
-            default = []
+            arg_type = String
+            action = :store_arg
+            nargs = '*'
             range_tester = x -> all(in(f, PLOTTING_FUNCTIONS) for f in x)
         "--outfile"
             help = "The file to write the output of synthesis to. '--save' must be set to true for this to take effect."

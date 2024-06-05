@@ -74,20 +74,3 @@ import FromFile: @from
         end
     end
 end
-
-# ```bash
-# for file in $(ls ./test/test_*.jl); do
-#     base=$(basename $file .jl)
-#     newfile="./test/test_$base.jl"
-#     echo "using Test" > $newfile
-#     echo "" >> $newfile
-#     echo "\"\"\"" >> $newfile
-#     echo "Test cases for $newfile" >> $newfile
-#     echo "\"\"\"" >> $newfile
-#     echo "" >> $newfile
-#     echo "function test_$base()" >> $newfile
-#     echo "    using Test"  >> $newfile
-#     echo "    @test true"  >> $newfile
-#     echo "end" >> $newfile
-# done
-# ````
