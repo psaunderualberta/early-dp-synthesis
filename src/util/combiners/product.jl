@@ -1,3 +1,6 @@
+import FromFile: @from
+@from "../../Constants.jl" import Combiner
+
 struct ProductCombiner <: Combiner
 end
 

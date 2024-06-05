@@ -1,3 +1,6 @@
+import FromFile: @from
+@from "../../Constants.jl" import PrivacyEstimator
+
 struct NonPrivacyEstimator <: PrivacyEstimator
 end
 

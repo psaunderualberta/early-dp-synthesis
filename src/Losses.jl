@@ -1,7 +1,5 @@
 using SymbolicRegression: Dataset, eval_tree_array
-using DynamicExpressions
-
-include("Common.jl")
+using DynamicExpressions: string_tree
 
 # TODO: Perhaps make use of optuna later
 

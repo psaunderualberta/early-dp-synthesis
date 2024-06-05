@@ -1,16 +1,15 @@
+import FromFile: @from
+@from "../../Constants.jl" import PrivacyEstimator
+@from "../misc/eval_tree.jl" import eval
+
 using KernelDensity
 using Distributions
-
-include("../misc/eval_tree.jl")
 
 struct KDEPrivacyEstimator <: PrivacyEstimator
 end
 
 
 function varepsilon(est::KDEPrivacyEstimator, tree, dataset::Dataset{T,L}, options, prediction::AbstractVector{T}, params::Dict; num_iters::Int64=100)::L where {T,L}
-
-    # function varepsilon(kde1::KDE, kde2::KDE, sampler::ContinuousUnivariateDistribution, num_iters::Int64=1000)::Float64 where {T}
-
     if haskey(params, "use_predictions") && params["use_predictions"]
         prediction, _ = eval(tree, dataset, options)
     end

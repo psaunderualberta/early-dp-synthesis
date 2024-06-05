@@ -2,10 +2,6 @@
 Functionality to save a plot to a file.
 """
 
-module PlotSaving
-
-export save_plot
-
 using Gadfly
 using Cairo
 
@@ -31,4 +27,3 @@ function save_plot(plot::Plot, path::String)
     end
 end
 
-end

@@ -1,31 +1,13 @@
-using SymbolicRegression
+import FromFile: @from
 
-include("Constants.jl")
-using .Constants
+# Import all the necessary types and functions
+@from "./util/accuracy/linear.jl" import LinearAccuracyEstimator
+@from "./util/accuracy/quadratic.jl" import QuadraticAccuracyEstimator
+@from "./util/privacy/kde-estimator.jl" import KDEPrivacyEstimator
+@from "./util/privacy/non-estimator.jl" import NonPrivacyEstimator
+@from "./util/combiners/linear.jl" import LinearCombiner
+@from "./util/combiners/product.jl" import ProductCombiner
 
-abstract type PrivacyEstimator end
-abstract type AccuracyEstimator end
-abstract type Combiner end
-
-# Include accuracy estimators, privacy estimators, and combiners
-function recursive_include(path::String)
-    """
-    Just include everything for now :)
-    """
-    items = sort(readdir(path))
-
-    for item = items
-        newpath = joinpath(path, item)
-
-        if isdir(newpath)
-            recursive_include(newpath)
-        elseif isfile(newpath) && endswith(item, ".jl")
-            include(newpath)
-        end
-    end
-end
-
-recursive_include(joinpath(@__DIR__, "util"))
 
 # Publicly exposed estimators
 const accuracy_estimators = Dict(

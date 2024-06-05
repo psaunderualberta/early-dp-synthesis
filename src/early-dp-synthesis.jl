@@ -17,8 +17,11 @@ end
     using SymbolicRegression
     using ArgParse
     using Dates
+    import FromFile: @from
 
-    include("Losses.jl")
+    @from "Losses.jl" import privacy_loss
+    @from "Common.jl" import accuracy_estimators, privacy_estimators, combiners
+    @from "Constants.jl" import SENSITIVITY_COLUMN_NAME
 
     function main(args)
         println("Running with args: ")

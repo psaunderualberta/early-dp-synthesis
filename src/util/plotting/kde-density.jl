@@ -2,9 +2,8 @@
 This module contains functions for plotting distributions of data and kernel density estimates.
 """
 
-module KDEDensityPlot
-
-export kde_density_plot
+import FromFile: @from
+@from "../simplification/simplify.jl" import simplify_numeric
 
 using KernelDensity
 using Distributions
@@ -12,13 +11,13 @@ using Gadfly
 using Interpolations
 using Cairo
 
-function kde_density_plot(distribution::String, n::Integer; kwargs...)
+function kde_density_plot(distribution::String, data::AbstractVector{Real}; kwargs...)
     """
     Plot the kernel density estimate of a distribution.
 
     Args:
         distribution (String): The distribution to sample from.
-        n (Integer): The number of samples to take.
+        data (AbstractVector{Real}): The data to fit the kernel density estimate to.
     
     Kwargs:
         hist_color (Color): The color of the histogram.
@@ -27,15 +26,13 @@ function kde_density_plot(distribution::String, n::Integer; kwargs...)
         ylabel (String): The y-axis label.
         title (String): The title of the plot.
     """
-    x = [eval(dist) for _ in 1:n]
-
-    fn = kde(x; boundary=(minimum(x), maximum(x)))
+    fn = kde(data; boundary=(minimum(data), maximum(data)))
     ik = InterpKDE(fn)
 
     # Check that the pdf is positive for all x
     for _ in 1:n
-        t = rand(Uniform(minimum(x), maximum(x)))
-        @assert pdf(ik, t) > 0 "$(t), $(minimum(x)), $(maximum(x))"
+        t = rand(Uniform(minimum(data), maximum(data)))
+        @assert pdf(ik, t) > 0 "$(t), $(minimum(data)), $(maximum(data))"
     end
 
     # Get plot attributes from kwargs, or set to default
@@ -48,8 +45,6 @@ function kde_density_plot(distribution::String, n::Integer; kwargs...)
     # Return the plot the histogram
     return plot(x=x, Geom.histogram(bincount=1000, density=true), color=[hist_color],
         Guide.xlabel(xlabel), Guide.ylabel(ylabel), Guide.title("$(title)"),
-        layer(x -> pdf(ik, x), minimum(x) - std(x), maximum(x) + std(x), color=[kde_color]),
+        layer(x -> pdf(ik, x), minimum(data) - std(data), maximum(data) + std(data), color=[kde_color]),
     )
-end
-
 end
