@@ -113,6 +113,10 @@ function parse_commandline()
             help = "The directory to write the output of synthesis to. '--save' must be set to true for this to take effect."
             arg_type = String
             default = "logs"
+        "--plotpath"
+            help = "The directory to write the plots of synthesis to. '--save' must be set to true for this to take effect."
+            arg_type = String
+            default = "plots"
         "--outfile"
             help = "The file to write the output of synthesis to. '--save' must be set to true for this to take effect."
             arg_type = String
