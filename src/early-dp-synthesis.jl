@@ -24,6 +24,8 @@ end
     @from "./util/losses.jl" import privacy_loss
     @from "./util/dataset.jl" import create_dataset
     @from "./util/distributions.jl" import normal, uniform, laplace
+    @from "./util/plotting.jl" import kde_density_plot, save_plot, PLOTTING_FUNCTIONS
+    @from "./util/simplification.jl" import insert_variables
 
     function main(args)
         println("Running with args: ")
@@ -35,8 +37,7 @@ end
         combest = haskey(combiners, args["combiner"]) ? combiners[args["combiner"]] : error("C")
 
         # Create a standard dataset
-        n = 10000
-        X, y = create_dataset(n)
+        X, y, vars = create_dataset(args["n_samples"])
 
         # Define loss function
         loss(tree, dataset, options) = privacy_loss(accest(), privest(), combest(), tree, dataset, options)
@@ -45,6 +46,7 @@ end
         # Define output file, creating dirs if necessary
         if args["save"]
             args["outpath"] = isdir(args["outpath"]) ? args["outpath"] : mkpath(args["outpath"])
+            args["plotpath"] = isdir(args["plotpath"]) ? args["plotpath"] : mkpath(args["plotpath"])
             outfile = joinpath(args["outpath"], args["outfile"])
             touch(outfile)
             @assert isfile(outfile) "Could not create file at $(outfile)"
@@ -72,7 +74,36 @@ end
         fit!(mach)  # Not sure why this says 'possible method call error'
 
         # Print report
-        println(report(mach))
+        rep = report(mach)
+        if args["save"]
+            # Generate plots
+            if isempty(args["plots"])
+                args["plots"] = PLOTTING_FUNCTIONS
+            end
+
+            # Create directory for plots
+            prepath = joinpath(args["plotpath"], nowtime)
+            isdir(prepath) || mkpath(prepath)
+
+            num_equations = length(rep.equations)
+            for i in 1:num_equations
+                equation = rep.equations[i]
+                complexity = rep.complexities[i]
+
+                # Sample from the equation
+                equation_wo_vars = insert_variables(equation, vars)
+                samples = [eval(equation_wo_vars) for _ in 1:n]
+
+                for plotname in args["plots"]
+                    plot_fn = PLOTTING_FUNCTIONS[plotname]
+                    filename = joinpath(prepath, "$(complexity)-$(plotname).png")
+                    p = plot_fn(equation, samples)
+                    save_plot(p, filename)
+                end
+            end
+        end
+
+        return rep
     end
 end
 
@@ -97,6 +128,11 @@ function parse_commandline()
             help = "The sensitivity of the dataset"
             arg_type = Float64
             default = 1.0
+        "--n_samples", "-n"
+            help = "The number of samples to generate when creating the dataset"
+            arg_type = Int
+            default = 10000
+            range_tester = x -> x > 0
         "--timeout"
             help = "The maximum time to run the symbolic regression model, in seconds"
             arg_type = Int
@@ -112,6 +148,11 @@ function parse_commandline()
             help = "The directory to write the plots of synthesis to. '--save' must be set to true for this to take effect."
             arg_type = String
             default = "plots"
+        "--plots"
+            help = "The specific plots to generate. If not set, all plots will be generated. '--save' must be set to true for this to take effect."
+            nargs = "*"
+            default = []
+            range_tester = x -> all(in(f, PLOTTING_FUNCTIONS) for f in x)
         "--outfile"
             help = "The file to write the output of synthesis to. '--save' must be set to true for this to take effect."
             arg_type = String

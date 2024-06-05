@@ -3,7 +3,7 @@ This module contains functions for plotting distributions of data and kernel den
 """
 
 import FromFile: @from
-@from "./simplification.jl" import simplify_numeric
+@from "./simplification.jl" import simplify_numeric, insert_variables
 @from "./distributions.jl" import uniform, normal, laplace
 
 using KernelDensity
@@ -11,6 +11,11 @@ using Distributions
 using Gadfly
 using Interpolations
 using Cairo
+
+### Dictionary of registered valid plotting functions
+const PLOTTING_FUNCTIONS = Dict(
+    "kde_density_plot" => kde_density_plot,
+)
 
 ### Functionality to plot a kernel density estimate of a distribution.
 
@@ -75,4 +80,3 @@ function save_plot(plot::Plot, path::String)
         error("Extension not supported: $extension")
     end
 end
-

@@ -3,11 +3,11 @@ using FromFile: @from
 
 function create_dataset(n::Integer)
     @assert n > 0 "Number of samples must be positive!"
-    d = Dict(
-        SENSITIVITY_COLUMN_NAME => fill(1.0, n),
+    values = Dict(
+        SENSITIVITY_COLUMN_NAME => 1.0,
     )
 
-    X = NamedTuple(((Symbol(key), value) for (key, value) in d))
+    X = NamedTuple(((Symbol(key), fill(value, n)) for (key, value) in values))
     y = @. zeros(Float64, n)
-    return (X, y)
+    return (X, y, values)
 end

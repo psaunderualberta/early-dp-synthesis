@@ -24,3 +24,12 @@ function simplify_numeric(e::Expr)
 
     e
 end
+
+function insert_variables(e::String, variables::Dict)
+    """
+    Insert variables into an expression.
+    """
+    for (key, value) in variables
+        e = replace(e, key => value)
+    end
+end
