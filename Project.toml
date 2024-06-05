@@ -1,4 +1,4 @@
-name = "EarlyDPsynthesis"
+name = "early-dp-synthesis"
 uuid = "2d64186c-5c82-452f-af88-9622885882c5"
 authors = ["PaulSaunders"]
 version = "0.1.0"
@@ -19,3 +19,4 @@ MLJ = "add582a8-e3ab-11e8-2d5e-e98b27df1bc7"
 PyCall = "438e738f-606a-5dbb-bf0a-cddfbfd45ab0"
 StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 SymbolicRegression = "8254be44-1295-4e6a-a16d-46603ac705cb"
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"

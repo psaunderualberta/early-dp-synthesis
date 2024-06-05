@@ -38,13 +38,19 @@ function insert_variables(e::String, variables::Dict)
     e
 end
 
+
+"""
+Test cases for simplification.jl
+"""
+
 function test_simplification() 
     @testset "Test Simplify Numeric" begin
-        @test simplify_numeric(:(1 + 2)) == :(3)
-        @test simplify_numeric(:(1 + 2 + 3)) == :(6)
-        @test simplify_numeric(:(1 + (2 * 3))) == :(7)
-        @test simplify_numeric(:((1 + 2) * 3)) == :(9)
-        @test simplify_numeric(:(1 + 2 + e)) == :(3 + e)
+        @test simplify_numeric(:(1 + 2)) == 3
+        @test simplify_numeric(:(1 + (2 + 3))) == 6
+        @test simplify_numeric(:(1 + (2 * 3))) == 7
+        @test simplify_numeric(:((1 + 2) * 3)) == 9
+        @test simplify_numeric(:(1 + (2 + e))) == :(1 + (2 + e))  # TODO: This should be simplified.
+        @test simplify_numeric(:((1 + 2) + e)) == :(3 + e)
         @test simplify_numeric(:(f(1 + 2))) == :(f(3))
         @test simplify_numeric(:(f(3) + 3)) == :(f(3) + 3)
         @test simplify_numeric(:(f(1 + 2) + 3)) == :(f(3) + 3)

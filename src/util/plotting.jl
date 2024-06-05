@@ -12,11 +12,6 @@ using Gadfly
 using Interpolations
 using Cairo
 
-### Dictionary of registered valid plotting functions
-const PLOTTING_FUNCTIONS = Dict(
-    "kde_density_plot" => kde_density_plot,
-)
-
 ### Functionality to plot a kernel density estimate of a distribution.
 
 function kde_density_plot(distribution::String, data::AbstractVector{Real}; kwargs...)
@@ -80,3 +75,8 @@ function save_plot(plot::Plot, path::String)
         error("Extension not supported: $extension")
     end
 end
+
+### Dictionary of registered valid plotting functions
+const PLOTTING_FUNCTIONS = Dict(
+    "kde_density_plot" => kde_density_plot,
+)
