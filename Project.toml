@@ -1,4 +1,4 @@
-name = "early-dp-synthesis"
+name = "EarlyDPsynthesis"
 uuid = "2d64186c-5c82-452f-af88-9622885882c5"
 authors = ["PaulSaunders"]
 version = "0.1.0"
