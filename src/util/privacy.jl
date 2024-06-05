@@ -1,17 +1,22 @@
+"""
+This file contains the loss functions used to evaluate the privacy loss of a distribution.
+"""
+
 import FromFile: @from
-@from "../../Constants.jl" import PrivacyEstimator
-@from "../misc/eval_tree.jl" import eval
+@from "../Constants.jl" import PrivacyEstimator, SENSITIVITY_COLUMN_NAME
 
 using KernelDensity
 using Distributions
+import SymbolicRegression: Dataset, eval_tree_array
+
+### KDE Privacy Estimator
 
 struct KDEPrivacyEstimator <: PrivacyEstimator
 end
 
-
-function varepsilon(est::KDEPrivacyEstimator, tree, dataset::Dataset{T,L}, options, prediction::AbstractVector{T}, params::Dict; num_iters::Int64=100)::L where {T,L}
+function varepsilon(_::KDEPrivacyEstimator, tree, dataset::Dataset{T,L}, options, prediction::AbstractVector{T}, params::Dict)::L where {T,L}
     if haskey(params, "use_predictions") && params["use_predictions"]
-        prediction, _ = eval(tree, dataset, options)
+        prediction, _ = eval_tree_array(tree, dataset.X, options)
     end
 
     # Dist of data when shifted by maximum possible amount.
@@ -33,7 +38,7 @@ function varepsilon(est::KDEPrivacyEstimator, tree, dataset::Dataset{T,L}, optio
     vareps = L(0)
 
     # Use random sampling to estimate varepsilon
-    samples, complete = eval(tree, dataset, options)
+    samples, complete = eval_tree_array(tree, dataset.X, options)
     if !complete
         return L(Inf)
     end
@@ -60,4 +65,13 @@ function varepsilon(est::KDEPrivacyEstimator, tree, dataset::Dataset{T,L}, optio
     end
 
     return L(log(vareps))
+end
+
+### Non Privacy Estimator
+
+struct NonPrivacyEstimator <: PrivacyEstimator
+end
+
+function varepsilon(_::NonPrivacyEstimator, tree, dataset::Dataset{T,L}, options, prediction::AbstractVector{T}, params::Dict)::L where {T, L}
+    return L(0.0)
 end

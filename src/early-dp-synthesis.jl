@@ -17,34 +17,26 @@ end
     using SymbolicRegression
     using ArgParse
     using Dates
-    import FromFile: @from
 
-    @from "Losses.jl" import privacy_loss
+    import FromFile: @from
     @from "Common.jl" import accuracy_estimators, privacy_estimators, combiners
     @from "Constants.jl" import SENSITIVITY_COLUMN_NAME
+    @from "./util/losses.jl" import privacy_loss
+    @from "./util/dataset.jl" import create_dataset
+    @from "./util/distributions.jl" import normal, uniform, laplace
 
     function main(args)
         println("Running with args: ")
         display(args)
+
+        # Define the methods of computing accuracy, privacy, and combining them
         accest = haskey(accuracy_estimators, args["accuracy"]) ? accuracy_estimators[args["accuracy"]] : error("A")
         privest = haskey(privacy_estimators, args["privacy"]) ? privacy_estimators[args["privacy"]] : error("B")
         combest = haskey(combiners, args["combiner"]) ? combiners[args["combiner"]] : error("C")
 
-        # Dataset with two named features
+        # Create a standard dataset
         n = 10000
-
-        # Ablee to use variables as keys
-        d = Dict(
-            SENSITIVITY_COLUMN_NAME => fill(args["sensitivity"], n),
-        )
-
-        X =  NamedTuple(((Symbol(key), value) for (key, value) in d))
-        y = @. zeros(Float64, n)
-
-        # Define uniform
-        unif(a::T, b::T) where {T} = a < b ? rand(Uniform(a, b)) : T(NaN)
-        normal(a, b) = b > 0 ? rand(Normal(a, b)) : NaN
-        laplace(b) = b > 0 ? rand(Laplace(0, b)) : NaN
+        X, y = create_dataset(n)
 
         # Define loss function
         loss(tree, dataset, options) = privacy_loss(accest(), privest(), combest(), tree, dataset, options)
@@ -68,7 +60,7 @@ end
             procs=processes,
             timeout_in_seconds=args["timeout"], # 10 minutes
             # niterations=5,
-            binary_operators=[+, -, normal, unif],
+            binary_operators=[+, -, normal, uniform],
             unary_operators=[laplace],
             loss_function=loss,
             maxdepth=10,

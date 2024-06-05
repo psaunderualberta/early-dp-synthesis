@@ -3,13 +3,16 @@ This module contains functions for plotting distributions of data and kernel den
 """
 
 import FromFile: @from
-@from "../simplification/simplify.jl" import simplify_numeric
+@from "./simplification.jl" import simplify_numeric
+@from "./distributions.jl" import uniform, normal, laplace
 
 using KernelDensity
 using Distributions
 using Gadfly
 using Interpolations
 using Cairo
+
+### Functionality to plot a kernel density estimate of a distribution.
 
 function kde_density_plot(distribution::String, data::AbstractVector{Real}; kwargs...)
     """
@@ -48,3 +51,28 @@ function kde_density_plot(distribution::String, data::AbstractVector{Real}; kwar
         layer(x -> pdf(ik, x), minimum(data) - std(data), maximum(data) + std(data), color=[kde_color]),
     )
 end
+
+### Functionality to save a plot to a file.
+
+function save_plot(plot::Plot, path::String)
+    extensions = Dict(
+        "pdf" => PDF,
+        "png" => PNG,
+        "svg" => SVG,
+        "ps" => PS,
+        "eps" => EPS,
+        "tex" => PGF,
+    )
+
+    # Get extension from filename
+    extension = split(path, ".")[end]
+
+    # Get extension type
+    if haskey(extensions, extension)
+        graphic_fun = extensions[extension]
+        extension = draw(graphic_fun(path, 6inch, 4inch), plot)
+    else
+        error("Extension not supported: $extension")
+    end
+end
+

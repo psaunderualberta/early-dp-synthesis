@@ -1,5 +1,11 @@
 using SymbolicRegression: Dataset, eval_tree_array
 using DynamicExpressions: string_tree
+using Distributions: std
+
+import FromFile: @from
+@from "./accuracy.jl" import accuracy
+@from "./privacy.jl" import varepsilon
+@from "./combiners.jl" import combine
 
 # TODO: Perhaps make use of optuna later
 
