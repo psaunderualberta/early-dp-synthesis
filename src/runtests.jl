@@ -4,7 +4,7 @@ import FromFile: @from
 @testset "All" begin
     @testset "Test Accuracy" begin
         try
-            @from "./util/accuracy.jl" import test_accuracy
+            @from "./test/test_accuracy.jl" import test_accuracy
             test_accuracy()
         catch
             @test true
@@ -13,7 +13,7 @@ import FromFile: @from
     
     @testset "Test Combiners" begin
         try
-            @from "./util/combiners.jl" import test_combiners
+            @from "./test/test_combiners.jl" import test_combiners
             test_combiners()
         catch
             @test true
@@ -22,7 +22,7 @@ import FromFile: @from
     
     @testset "Test Dataset" begin
         try
-            @from "./util/dataset.jl" import test_dataset
+            @from "./test/test_dataset.jl" import test_dataset
             test_dataset()
         catch
             @test true
@@ -31,7 +31,7 @@ import FromFile: @from
     
     @testset "Test Distributions" begin
         try
-            @from "./util/distributions.jl" import test_distributions
+            @from "./test/test_distributions.jl" import test_distributions
             test_distributions()
         catch
             @test true
@@ -40,7 +40,7 @@ import FromFile: @from
     
     @testset "Test Losses" begin
         try
-            @from "./util/losses.jl" import test_losses
+            @from "./test/test_losses.jl" import test_losses
             test_losses()
         catch
             @test true
@@ -49,7 +49,7 @@ import FromFile: @from
     
     @testset "Test Plotting" begin
         try
-            @from "./util/plotting.jl" import test_plotting
+            @from "./test/test_plotting.jl" import test_plotting
             test_plotting()
         catch
             @test true
@@ -58,7 +58,7 @@ import FromFile: @from
     
     @testset "Test Privacy" begin
         try
-            @from "./util/privacy.jl" import test_privacy
+            @from "./test/test_privacy.jl" import test_privacy
             test_privacy()
         catch
             @test true
@@ -67,7 +67,7 @@ import FromFile: @from
 
     @testset "Test Simplification" begin
         try
-            @from "./util/simplification.jl" import test_simplification
+            @from "./test/test_simplification.jl" import test_simplification
             test_simplification()
         catch
             @test true
@@ -76,15 +76,18 @@ import FromFile: @from
 end
 
 # ```bash
-# for file in $(ls ./util/*.jl); do
+# for file in $(ls ./test/test_*.jl); do
 #     base=$(basename $file .jl)
-#     echo "\"\"\"" >> ./util/$file
-#     echo "Test cases for $file" >> ./util/$file
-#     echo "\"\"\"" >> ./util/$file
-#     echo "" >> ./util/$file
-#     echo "function test_$base()"
-#     echo "    @test true"  >> ./util/$file
-#     echo "end" >> ./util/$file
-#     echo "" >> ./util/$file
+#     newfile="./test/test_$base.jl"
+#     echo "using Test" > $newfile
+#     echo "" >> $newfile
+#     echo "\"\"\"" >> $newfile
+#     echo "Test cases for $newfile" >> $newfile
+#     echo "\"\"\"" >> $newfile
+#     echo "" >> $newfile
+#     echo "function test_$base()" >> $newfile
+#     echo "    using Test"  >> $newfile
+#     echo "    @test true"  >> $newfile
+#     echo "end" >> $newfile
 # done
 # ````
