@@ -29,9 +29,13 @@ function varepsilon(_::KDEPrivacyEstimator, tree, dataset::Dataset{T,L}, options
     model = kde(prediction; boundary=limits)
     model_ik = InterpKDE(model)
 
-    # Get the distribution when data is shifted left by sensitivity
-    sens_model = kde(prediction .- sensitivity; boundary=limits .- sensitivity)
-    sens_model_ik = InterpKDE(sens_model)
+    # Get the distributions when data is shifted by sensitivity
+    sens_model_left = kde(prediction .- sensitivity; boundary=limits .- sensitivity)
+    sens_model_right = kde(prediction .+ sensitivity; boundary=limits .+ sensitivity)
+    sens_model_iks = [
+        InterpKDE(sens_model_left),
+        InterpKDE(sens_model_right)
+    ]
 
     # Totally arbitrary choice for min & max of sampling
     # TODO: Since we're using kdes, we should probably make use of a distribution other than the gaussian
@@ -47,7 +51,7 @@ function varepsilon(_::KDEPrivacyEstimator, tree, dataset::Dataset{T,L}, options
     for x in samples
         model_prob = pdf(model_ik, x)
 
-        # This datapoint being impossible is not an issue, since our bounds are 
+        # This datapoint being impossible is not an issue, since our bounds might be 
         # outside the min & max of the sampled data itself
         if model_prob <= 0
             continue
@@ -55,13 +59,15 @@ function varepsilon(_::KDEPrivacyEstimator, tree, dataset::Dataset{T,L}, options
 
         # If this datapoint is impossible under neighbouring distributions,
         # then the privacy parameter (varepsilon) is infinite
-        sens_model_prob = pdf(sens_model_ik, x)
-        if sens_model_prob == 0
-            return L(Inf)
-        end
+        for sens_ik in sens_model_iks
+            sens_prob = pdf(sens_ik, x)
+            if sens_prob == 0
+                return L(Inf)
+            end
 
-        diff = model_prob / sens_model_prob
-        vareps = max(vareps, max(diff, 1 / diff))
+            diff = model_prob / sens_prob
+            vareps = max(vareps, max(diff, 1 / diff))
+        end
     end
 
     return L(log(vareps))
