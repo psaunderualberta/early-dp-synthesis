@@ -15,7 +15,7 @@ end
     using MLJ
     using Distributions
     using SymbolicRegression
-    using DynamicExpressions: string_tree
+    using DynamicExpressions: Node
     using ArgParse
     using Dates
 
@@ -76,11 +76,10 @@ end
 
         # Print report
         rep = report(mach)
-        println(rep)
         nowtime = Dates.format(now(), "yyyy-mm-dd-HH-MM")
         if args["save"]
             # Generate plots
-            if isnothing(args["plots"])
+            if isempty(args["plots"])
                 args["plots"] = PLOTTING_FUNCTIONS
             end
 
@@ -90,17 +89,16 @@ end
 
             num_equations = length(rep.equations)
             for i in 1:num_equations
-                equation = string_tree(rep.equations[i], model)  # TODO: Where are the operators stored?
+                equation = rep.equation_strings[i]  # TODO: Where are the operators stored?
                 complexity = rep.complexities[i]
 
                 # Sample from the equation
-                equation_wo_vars = insert_variables(equation, vars)
-                samples = [eval(equation_wo_vars) for _ in 1:n]
+                equation_wo_vars = Meta.parse(insert_variables(equation, vars))
+                samples = [eval(equation_wo_vars) for _ in 1:args["n_samples"]]
 
-                for plotname in args["plots"]
-                    plot_fn = PLOTTING_FUNCTIONS[plotname]
-                    filename = joinpath(prepath, "$(complexity)-$(plotname).png")
-                    p = plot_fn(equation, samples)
+                for (plotname, plotfunc) in args["plots"]
+                    filename = joinpath(prepath, "$(complexity)-$(plotname).pdf")
+                    p = plotfunc(equation, samples)
                     save_plot(p, filename)
                 end
             end

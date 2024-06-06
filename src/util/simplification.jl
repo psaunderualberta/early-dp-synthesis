@@ -5,6 +5,9 @@ Function calls are not simplified, but algebraic expressions are simplified.
 i.e. `simplify_numeric(:(1 + 2))` returns `:(3)` `(3)`, but `simplify_numeric(:(f(1) + 2))` returns `:(f(1) + 2)`.
 """
 
+import FromFile: @from
+@from "./distributions.jl" import uniform, normal, laplace
+
 simplify_numeric(e) = error("not expected type: $(typeof(e))")
 simplify_numeric(e::Symbol) = e
 simplify_numeric(e::Number; digits::Integer=2) = round(e, digits=digits)  # Round to 2 decimal places

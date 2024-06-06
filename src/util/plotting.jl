@@ -14,7 +14,7 @@ using Cairo
 
 ### Functionality to plot a kernel density estimate of a distribution.
 
-function kde_density_plot(distribution::String, data::AbstractVector{Real}; kwargs...)
+function kde_density_plot(distribution::String, data::AbstractVector{<:Real}; kwargs...)
     """
     Plot the kernel density estimate of a distribution.
 
@@ -29,14 +29,6 @@ function kde_density_plot(distribution::String, data::AbstractVector{Real}; kwar
         ylabel (String): The y-axis label.
         title (String): The title of the plot.
     """
-    fn = kde(data; boundary=(minimum(data), maximum(data)))
-    ik = InterpKDE(fn)
-
-    # Check that the pdf is positive for all x
-    for _ in 1:n
-        t = rand(Uniform(minimum(data), maximum(data)))
-        @assert pdf(ik, t) > 0 "$(t), $(minimum(data)), $(maximum(data))"
-    end
 
     # Get plot attributes from kwargs, or set to default
     hist_color = get(kwargs, :hist_color, colorant"blue")
@@ -45,10 +37,26 @@ function kde_density_plot(distribution::String, data::AbstractVector{Real}; kwar
     ylabel = get(kwargs, :ylabel, "Density")
     title = get(kwargs, :title, simplify_numeric(Meta.parse(distribution)))
 
+    limits = (minimum(data), maximum(data))
+    if limits[1] == limits[2]
+        return plot(x=data, Geom.histogram(bincount=1000, density=true), color=[hist_color],
+            Guide.xlabel(xlabel), Guide.ylabel(ylabel), Guide.title("$(title)"),
+        )
+    end
+
+    ik = InterpKDE(kde(data; boundary=limits))
+
+    # Check that the pdf is nonnegative for all x, expanded slightly to account for constant distributions
+    limits = (limits[1] - std(data) - 0.1, limits[2] + std(data) + 0.1)
+    for _ in eachindex(data)
+        t = rand(Uniform(limits...))
+        @assert pdf(ik, t) >= 0 "$(t), $(limits[1]), $(limits[2])"
+    end
+
     # Return the plot the histogram
-    return plot(x=x, Geom.histogram(bincount=1000, density=true), color=[hist_color],
+    return plot(x=data, Geom.histogram(bincount=1000, density=true), color=[hist_color],
         Guide.xlabel(xlabel), Guide.ylabel(ylabel), Guide.title("$(title)"),
-        layer(x -> pdf(ik, x), minimum(data) - std(data), maximum(data) + std(data), color=[kde_color]),
+        layer(x -> pdf(ik, x), limits[1], limits[2], color=[kde_color]),
     )
 end
 
@@ -60,7 +68,6 @@ function save_plot(plot::Plot, path::String)
         "png" => PNG,
         "svg" => SVG,
         "ps" => PS,
-        "eps" => EPS,
         "tex" => PGF,
     )
 

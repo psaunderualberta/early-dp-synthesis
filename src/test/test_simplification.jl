@@ -25,6 +25,9 @@ function test_simplification()
         e = "x + y"
         @test insert_variables(e, variables) == "1 + 2"
 
+        e = "x+y"
+        @test insert_variables(e, variables) == "1+2"
+
         e = "x + y + x"
         @test insert_variables(e, variables) == "1 + 2 + 1"
 
