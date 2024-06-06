@@ -3,11 +3,13 @@ using Distributed
 # Precompile in main thread
 using Pkg
 Pkg.activate(joinpath(@__DIR__, ".."))
+Pkg.resolve()
 Pkg.instantiate()
 
 @everywhere begin
     using Pkg
     Pkg.activate(joinpath(@__DIR__, ".."))
+    Pkg.resolve()
     Pkg.instantiate()
 end
 
@@ -18,8 +20,10 @@ end
     using DynamicExpressions: Node
     using ArgParse
     using Dates
-
     import FromFile: @from
+end
+
+@everywhere begin
     @from "Common.jl" import accuracy_estimators, privacy_estimators, combiners
     @from "Constants.jl" import SENSITIVITY_COLUMN_NAME
     @from "./util/losses.jl" import privacy_loss
@@ -46,6 +50,8 @@ end
 
         # Define output file, creating dirs if necessary
         if args["save"]
+            args["outpath"] = joinpath(args["outpath"], args["data-subdir"])
+            args["plotpath"] = joinpath(args["plotpath"], args["data-subdir"])
             args["outpath"] = isdir(args["outpath"]) ? args["outpath"] : mkpath(args["outpath"])
             args["plotpath"] = isdir(args["plotpath"]) ? args["plotpath"] : mkpath(args["plotpath"])
             outfile = joinpath(args["outpath"], args["outfile"])
@@ -76,6 +82,7 @@ end
 
         # Print report
         rep = report(mach)
+        println(rep)
         nowtime = Dates.format(now(), "yyyy-mm-dd-HH-MM")
         if args["save"]
             # Generate plots
@@ -83,21 +90,19 @@ end
                 args["plots"] = PLOTTING_FUNCTIONS
             end
 
-            # Create directory for plots
-            prepath = joinpath(args["plotpath"], nowtime)
-            isdir(prepath) || mkpath(prepath)
-
             num_equations = length(rep.equations)
+            println(num_equations)
             for i in 1:num_equations
                 equation = rep.equation_strings[i]  # TODO: Where are the operators stored?
                 complexity = rep.complexities[i]
 
                 # Sample from the equation
-                equation_wo_vars = Meta.parse(insert_variables(equation, vars))
-                samples = [eval(equation_wo_vars) for _ in 1:args["n_samples"]]
+                quoted_equation = Meta.parse(insert_variables(equation, vars))
+                samples = [eval(quoted_equation) for _ in 1:args["n_samples"]]
 
                 for (plotname, plotfunc) in args["plots"]
-                    filename = joinpath(prepath, "$(complexity)-$(plotname).pdf")
+                    println("Plotting '$plotname' for '$equation'")
+                    filename = joinpath(args["plotpath"], "$(complexity)-$(plotname).pdf")
                     p = plotfunc(equation, samples)
                     save_plot(p, filename)
                 end
@@ -149,6 +154,10 @@ function parse_commandline()
             help = "The directory to write the plots of synthesis to. '--save' must be set to true for this to take effect."
             arg_type = String
             default = "plots"
+        "--data-subdir"
+            help = "The subdirectory to write plots & logs within, in their respective directories. '--save' must be set to true for this to take effect."
+            arg_type = String
+            default = "$(nowtime)"
         "--plots"
             help = "The specific plots to generate. If not set, all plots will be generated. '--save' must be set to true for this to take effect."
             arg_type = String
