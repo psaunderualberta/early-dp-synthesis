@@ -1,17 +1,7 @@
 using Distributed
 
-# Precompile in main thread
-using Pkg
-Pkg.activate(joinpath(@__DIR__, ".."))
-Pkg.resolve()
-Pkg.instantiate()
-
-@everywhere begin
-    using Pkg
-    Pkg.activate(joinpath(@__DIR__, ".."))
-    Pkg.resolve()
-    Pkg.instantiate()
-end
+# Ensure project can automatically pass to child processes
+@assert haskey(ENV, "JULIA_PROJECT") "The JULIA_PROJECT environment variable must be set!"
 
 @everywhere begin
     using MLJ
@@ -68,7 +58,7 @@ end
             parallelism=:multiprocessing,
             procs=processes,
             timeout_in_seconds=args["timeout"], # 10 minutes
-            # niterations=5,
+            niterations=10 ^ 6,
             binary_operators=[+, -, normal, uniform],
             unary_operators=[laplace],
             loss_function=loss,
