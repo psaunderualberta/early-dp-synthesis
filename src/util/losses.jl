@@ -23,7 +23,7 @@ function privacy_loss(accest, privest, combest, tree, dataset::Dataset{T,L}, opt
             weird = any(dist -> contains(st, dist), ["unif", "normal", "laplace"]) && length(unique(predictions)) == 1
             if weird
                 println(string_tree(tree, options), " | ", predictions[1:5], " | ", std(predictions))
-                exit(1)
+                # exit(1)
             end
         end
 

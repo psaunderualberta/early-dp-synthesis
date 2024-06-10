@@ -31,7 +31,9 @@ end
     @from "./util/distributions.jl" import normal, uniform, laplace
     @from "./util/plotting.jl" import kde_density_plot, save_plot, PLOTTING_FUNCTIONS
     @from "./util/simplification.jl" import insert_variables
+end
 
+@everywhere begin
     function main(args)
         println("Running with args: ")
         display(args)
@@ -68,7 +70,7 @@ end
             parallelism=:multiprocessing,
             procs=processes,
             timeout_in_seconds=args["timeout"], # 10 minutes
-            # niterations=5,
+            niterations=10 ^ 6,
             binary_operators=[+, -, normal, uniform],
             unary_operators=[laplace],
             loss_function=loss,
