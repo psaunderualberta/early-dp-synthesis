@@ -1,7 +1,17 @@
 using Distributed
 
-# Ensure project can automatically pass to child processes
-@assert haskey(ENV, "JULIA_PROJECT") "The JULIA_PROJECT environment variable must be set!"
+# Precompile in main thread
+using Pkg
+Pkg.activate(joinpath(@__DIR__, ".."))
+Pkg.resolve()
+Pkg.instantiate()
+
+@everywhere begin
+    using Pkg
+    Pkg.activate(joinpath(@__DIR__, ".."))
+    Pkg.resolve()
+    Pkg.instantiate()
+end
 
 @everywhere begin
     using MLJ
@@ -21,7 +31,9 @@ end
     @from "./util/distributions.jl" import normal, uniform, laplace
     @from "./util/plotting.jl" import kde_density_plot, save_plot, PLOTTING_FUNCTIONS
     @from "./util/simplification.jl" import insert_variables
+end
 
+@everywhere begin
     function main(args)
         println("Running with args: ")
         display(args)
