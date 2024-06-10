@@ -9,6 +9,7 @@ import FromFile: @from
 using KernelDensity
 using Distributions
 using Gadfly
+using Compose
 using Interpolations
 using Cairo
 
@@ -62,7 +63,7 @@ end
 
 ### Functionality to save a plot to a file.
 
-function save_plot(plot::Plot, path::String)
+function save_plot(plot::Union{Plot, Context}, path::String)
     extensions = Dict(
         "pdf" => PDF,
         "png" => PNG,
