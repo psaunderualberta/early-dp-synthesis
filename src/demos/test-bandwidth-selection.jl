@@ -14,7 +14,7 @@ struct KDE
 end
 
 const kernels = Dict(
-    "gaussian" => (x, x_i, h, n) -> 1 / sqrt(2 * pi) * exp(-1 / 2 * (x - x_i)^2 / h^2),
+    "gaussian" => (x, x_i, h, n) -> 1 / (n * h * sqrt(2 * pi)) * exp(-1 / 2 * (x - x_i)^2 / h^2),
 )
 
 const kernel_derivatives = Dict(
@@ -137,7 +137,6 @@ function plot_bandwidths()
     n = 10_000
     hs = collect(0.05:0.01:20.0)
 
-    sensitivity = 1.0
     distributions = Dict(
         "Uniform(0, 1)" => :(uniform(0, 1)),
         "Uniform(-5, 5)" => :(uniform(-5, 5)),
@@ -180,9 +179,9 @@ function test_bandwidth_estimation()
         x = [eval(dist) for _ in 1:n]
 
         fn = kde(x; boundary=(minimum(x), maximum(x)))
-        ik = InterpKDE(fn)
+        ik = InterpKDE(fn)  
     end
 end
 
 p = plot_bandwidths()
-save_plot(p, "bandwidths.pdf")
+save_plot(p, joinpath("plots", "bandwidths.pdf"))
