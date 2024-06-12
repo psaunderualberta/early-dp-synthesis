@@ -1,133 +1,176 @@
 using Gadfly
 using StatsBase
+using SpecialFunctions
+using FiniteDifferences
 import FromFile: @from
+import Random: seed!
 
 @from "../util/distributions.jl" import uniform, normal, laplace
 @from "../util/plotting.jl" import save_plot
 
-struct KDE
-    x_i::AbstractVector{<:Real}
-    h::Union{Real,Nothing}
-    kernel::Function
-    kernel_derivative::Function
-    kernel_second_derivative::Function
-end
+const kernel_antiderivatives = Dict(
+    "gaussian" => (x, x_i, h) -> h / 2 * (erf((x - x_i) / (sqrt(2) * h)) + 1),
+    "laplace" => (x, x_i, h) -> begin
+        if x <= x_i
+            return h / 2 * exp((x - x_i) / h)
+        end
 
-const kernels = Dict(
-    "gaussian" => (x, x_i, h, n) -> 1 / (n * h * sqrt(2 * pi)) * exp(-1 / 2 * (x - x_i)^2 / h^2),
+        h - h / 2 * exp((x_i - x) / h)
+    end,
+    "uniform" => (x, x_i, h) -> begin
+        if x - x_i <= - h
+            return 0.0
+        elseif abs(x - x_i) <= h
+            return (x - x_i + h) / 2
+        end
+
+        return h
+    end,
 )
 
-const kernel_derivatives = Dict(
-    "gaussian" => (x, x_i, h, n) -> (x - x_i)^2 * exp(-1 / 2(x - x_i)^2 / h^2) / (h^2 * n * sqrt(2 * pi)) * (1 / h^2 - 1)
+const sensitivity = 1.0
+const distributions = Dict(
+    "Uniform(0, 1)" => :(uniform(0.0, 1.0)),
+    "Laplace(0, 0.05)" => :(laplace(0.0, 0.05)),
+    "Laplace(Uniform(-5, 5), 1)" => :(laplace(uniform(-5, 5), 1.0)),
+    "Normal(Laplace(10), Normal(50 - sensitivity, sensitivity))" => :(normal(
+        laplace(10),
+        normal(
+            50.0 - sensitivity,
+            sensitivity
+        ))),
 )
 
-const kernel_second_derivatives = Dict(
-    "gaussian" => (x, x_i, h, n) -> exp(-1 / 2 * (x - x_i)^2 / h^2) * (2 * h^4 - 5 * h^2 * (x - x_i)^2 + (x - x_i)^4) / (h^7 * n * sqrt(2 * pi))
-)
-
-function KDE(data::AbstractVector{<:Real}, h::Real; k::String="gaussian")
+function cdf(data::AbstractVector{<:Real})
     """
-        Create a KDE object from the data and bandwidth.
+        Compute the empirical cdf of the data.
     """
-    kernel = kernels[k]
-    kernel_derivative = kernel_derivatives[k]
-    kernel_second_derivative = kernel_second_derivatives[k]
-
-    bins = fit(Histogram, data).edges[1]
-
-    return KDE(bins, h, kernel, kernel_derivative, kernel_second_derivative)
-end
-
-function H(kde::KDE, test_hist::Histogram, h::Real)
-    """
-        Compute 1 / 2 * \\sum_{i=1}^{n} (f_x - fhat_h(x))^2.
-        This denotes how well the kernel density estimate fits the data.
-    """
-
-    n = length(test_hist.weights)
-
-    test_weights = test_hist.weights
-    test_edges = collect(test_hist.edges[1][1:end-1])
-
-    return 1 / 2 * sum([(test_weights[i] - fhat_h(kde, test_edges[i], h))^2 for i in 1:n])
-end
-
-function H_prime(kde::KDE, test_hist::Histogram, h::Real)
-    """
-        Compute the derivative of H with respect to h.
-    """
-
-    n = length(test_hist.weights)
-
-    test_weights = test_hist.weights
-    test_edges = test_hist.edges[1:end-1]
-
-    return sum([
-        (fhat_h(kde, test_edges[i], h) - test_weights[i]) * fhat_h_prime(kde, test_edges[i], h)
-        for i in 1:n
-    ])
-
-end
-
-function H_prime_prime(kde::KDE, test_hist::Histogram, h::Real)
-    """
-        Compute the second derivative of H with respect to h.
-    """
-
-    n = length(test_hist.weights)
-
-    test_weights = test_hist.weights
-    test_edges = test_hist.edges[1:end-1]
-
-    return sum([
-        fhat_h_prime(kde, test_edges[i], h)^2 + (fhat_h(kde, x, h) - test_weights[i]) * fhat_h_prime_prime(kde, test_edges[i], h)
-        for i in 1:n
-    ])
-end
-
-function fhat_h(kde::KDE, x::Real, h::Real)
-    """
-        Compute the kernel density estimate of x given the data xs and bandwidth h.
-    """
-
-    @assert h > 0 "Bandwidth must be positive"
-
-    return sum([kde.kernel(x, xi, h, length(kde.x_i)) for xi in kde.x_i])
-end
-
-function fhat_h_prime(kde, x::Real, h::Real)
-    """
-        Compute the derivative of the kernel density estimate of x given the data xs and bandwidth h.
-    """
-
-    @assert h > 0 "Bandwidth must be positive"
-
-    return sum([kde.kernel_derivative(x, xi, h, length(kde.x_i)) for xi in kde.x_i])
-end
-
-function fhat_h_prime_prime(kde, x::Real, h::Real)
-    """
-        Compute the second derivative of the kernel density estimate of x given the data xs and bandwidth h.
-    """
-
-    @assert h > 0 "Bandwidth must be positive"
-
-    n = length(kde.x_i)
-    return sum([kde.kernel_second_derivative(x, xi, h, length(kde.x_i)) for xi in kde.x_i])
+    n = length(data)
+    return sort(data), [i / n for i in 1:n]
 end
 
 
-# function newton(x <: Real, x_i::AbstractVector{<:Real}, initial_h::Real; iters::Int=10)
-#     """
-#         Perform several iterations of newton's method to find a good estimate for the bandwidth.
-#     """
-#     h = initial_h
-#     for _ in 1:iters
-#         h = h - H_prime(x, x_i, h, "gaussian") / H_prime_prime(x, x_i, h, "gaussian")
-#     end
+function fit_kde(data::AbstractVector{<:Real}, frac::Float64; h::Union{Real, Nothing}=nothing, k::String="gaussian", seed::Union{Int,Nothing}=nothing)
+    """
+        Fit a KDE to the data.
+    """
 
-#     h
-# end
+    @assert 0 < frac <= 1 "Fraction must be between 0 and 1"
+
+    if !isnothing(seed)
+        seed!(seed)
+    end
+
+    # Select a random subset of the data
+    n = length(data)
+    idxs = [i for i in eachindex(data)]
+    indices = sample(idxs, floor(Int, n * frac), replace=false)
+    
+    kernel = kernel_antiderivatives[k]
+    
+    kde(x, h) = sum([kernel(x, data[i], h) for i in indices]) / (length(indices) * h)
+    kde(x) = sum([kernel(x, data[i], h) for i in indices]) / (length(indices) * h)
+    return kde
+end
+
+function fit_H(data::AbstractVector{<:Real}, frac::Float64; k::String="gaussian", seed::Union{Int,Nothing}=nothing)
+    """
+        Fit a KDE to the data.
+    """
+
+    x, y = cdf(data)
+
+    kde = fit_kde(x, frac; k=k, seed=seed)
+    H(h) = 1 / 2 * sum([(y[i] - kde(x[i], h))^2 for i in eachindex(x)])
+    return H
+end
+
+function plot_cdf_fits() 
+    nsamples = 1000
+    hs = collect(0.1:0.2:2)
+    eval_hs = collect(0.1:0.01:2.0)
+
+    n = 2
+    m = 2
+    @assert n * m == length(distributions)
+
+    firstorder = forward_fdm(5, 1)  # forward, since h < 0 is not defined.
+    secondorder = forward_fdm(5, 2)
+
+        
+    dir = joinpath("plots", "interpolation")
+    isdir(dir) || mkpath(dir)
+    for kernel in keys(kernel_antiderivatives)
+        cdfplots = []
+        hplots = []
+        fitplots = []
+        pdfplots = []
+    
+        for (name, dist) in distributions
+            x = [eval(dist) for _ in 1:nsamples]
+            x, y = cdf(x)
+    
+            kernels = [fit_kde(x, 0.1; h=h, seed=42, k=kernel) for h in hs]
+    
+            # Construct data matrix
+            @time data = stack([x, y, [k.(x) for k in kernels]...])
+    
+            # 
+            p = plot(
+                data, x=Col.value(1), y=Col.value(2:size(data, 2)...), color=Col.index(2:size(data, 2)...),
+                Geom.line,
+                Scale.color_discrete,
+                Guide.colorkey(labels=append!(["true"], map(string, hs))),
+                Guide.title(name),
+                Guide.xlabel("x"),
+                Guide.ylabel("F(x)")
+            )
+            push!(cdfplots, p)
+    
+            H = fit_H(x, 0.1; seed=42, k=kernel)
+            p = plot(x=eval_hs, y=[H(h) for h in eval_hs], Geom.line, Guide.xlabel("Bandwidth"), Guide.ylabel("H"), Guide.title(name))
+            push!(hplots, p)
+    
+            # Perform newton's method to find the optimal bandwidth
+            h = 0.05
+            fits = [fit_kde(x, 0.1; h=h, seed=42, k=kernel).(x)]
+            @time firstorder(H, h) / secondorder(H, h)
+            for _ in 1:10
+                h = h - firstorder(H, h) / secondorder(H, h)
+                h = max(1e-3, h)
+                push!(fits, fit_kde(x, 0.1; h=h, seed=42, k=kernel).(x))
+            end
+    
+            data = stack([x, y, fits...])
+            p = plot(
+                data, x=Col.value(1), y=Col.value(2:size(data, 2)...), color=Col.index(2:size(data, 2)...),
+                Geom.line,
+                Scale.color_discrete,
+                Guide.colorkey(labels=append!(["true"], map(string, 1:length(fits)))),
+                Guide.title(name),
+                Guide.xlabel("x"),
+                Guide.ylabel("F(x)")
+            )
+            push!(fitplots, p)
+
+            # Compute the pdf
+            points = collect(-2:0.01:2)
+            kde = fit_kde(x, 0.1; h=h, seed=42, k=kernel)
+            pdf = [central_fdm(5, 1; factor=1e-6)(kde, x) for x in points]
+            data = stack([points, pdf])  # No clue why I need to use 'stack' here rather than pass in normally
+            p = plot(data, x=Col.value(1), y=Col.value(2), Geom.line, Guide.xlabel("x"), Guide.ylabel("f(x)"), Guide.title(name))
+            push!(pdfplots, p)
+        end
+
+        for (fname, plots) in [("$(kernel)-cdf", cdfplots), ("$(kernel)-h", hplots), ("$(kernel)-fit", fitplots), ("$(kernel)-pdf", pdfplots)]
+            println(fname, " ", length(plots))
+            mat = convert(Matrix{Plot}, reshape(plots, n, m))
+            composite = gridstack(mat)
+    
+            save_plot(composite, joinpath(dir, "$fname.pdf"))
+        end
+    end
+end
 
 function plot_bandwidths()
     """
@@ -137,18 +180,9 @@ function plot_bandwidths()
     n = 10_000
     hs = collect(0.05:0.01:20.0)
 
-    distributions = Dict(
-        "Uniform(0, 1)" => :(uniform(0, 1)),
-        "Uniform(-5, 5)" => :(uniform(-5, 5)),
-        "Normal(0, 1)" => :(normal(0, 1)),
-        "Laplace(Unif(-5, 5), 1)" => :(laplace(uniform(-5, 5), 1)),
-    )
-
     plots = []
     for (name, dist) in distributions
         x = [eval(dist) for _ in 1:n]
-
-        test_hist = fit(Histogram, x, nbins=100)
 
         p = plot(x=hs, y=[H(KDE(x, h), test_hist, h) for h in hs], Geom.line, Guide.xlabel("Bandwidth"), Guide.ylabel("H"), Guide.title(name))
         push!(plots, p)
@@ -162,19 +196,6 @@ end
 function test_bandwidth_estimation()
     n = 10000
 
-    sensitivity = 1.0
-    distributions = Dict(
-        "Laplace(Unif(-5, 5), 1)" => :(laplace(uniform(-5, 5), 1)),
-        "Uniform(-5, 5)" => :(uniform(-5, 5)),
-        "Initial-Early-DP-Synth-Result" => :(normal(
-            laplace(10.113704306677194),
-            normal(
-                ((10.113704306677194 + (10.113704306677194 + 10.113704306677194)) + (10.113704306677194 + (10.113704306677194 + (10.113704306677194 + 10.113704306677194)))) - sensitivity,
-                sensitivity
-            ))),
-    )
-
-
     for (name, dist) in distributions
         x = [eval(dist) for _ in 1:n]
 
@@ -183,5 +204,4 @@ function test_bandwidth_estimation()
     end
 end
 
-p = plot_bandwidths()
-save_plot(p, joinpath("plots", "bandwidths.pdf"))
+plot_cdf_fits()
