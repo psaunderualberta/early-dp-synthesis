@@ -185,4 +185,4 @@ function test_bandwidth_estimation()
 end
 
 p = plot_bandwidths()
-save_plot(p, "bandwidths.pdf")
+save_plot(p, joinpath("plots", "bandwidths.pdf"))
