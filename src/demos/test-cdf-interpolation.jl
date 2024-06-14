@@ -3,6 +3,7 @@ using StatsBase
 using Interpolations
 using FiniteDifferences
 using Distributions: std, mean
+using JET
 import FromFile: @from
 
 @from "../util/distributions.jl" import uniform, normal, laplace
@@ -19,7 +20,8 @@ const interpolations = Dict(
     # "FritschButlandMonotonic" => FritschButlandMonotonicInterpolation(),
 )
 
-function steffen_monotonic_interpolation(data::AbstractVector{<:Real}; sensitivity::Real=1.0)
+function steffen_monotonic_interpolation(data::Vector{Float64}, eval_x::Vector{Float64}; sensitivity::Float64=1.0,
+        itp::Union{Nothing, Vector{Float64}}=nothing, itp_gradient::Union{Nothing, Vector{Float64}}=nothing)
     """
         Steffen Monotonic Interpolation
 
@@ -35,28 +37,26 @@ function steffen_monotonic_interpolation(data::AbstractVector{<:Real}; sensitivi
     cdf = append!([0.0], cdf, [1.0])
     n = n + 2
 
-    a = fill(0.0, n)
-    b = fill(0.0, n)
-    c = fill(0.0, n)
-    d = fill(0.0, n)
-    y_prime = fill(0.0, n)
+    a = Array{Float64}(undef, n)
+    b = Array{Float64}(undef, n)
+    c = Array{Float64}(undef, n)
+    d = Array{Float64}(undef, n)
+    h = Array{Float64}(undef, n)
+    s = Array{Float64}(undef, n)
+    p = Array{Float64}(undef, n)
+    y_prime = Array{Float64}(undef, n)
 
     # h_i = x_{i+1} - x_i
     # s_i = (y_{i+1} - y_i) / (x_{i+1} - x_i)
     # p_i = (s_{i-1} * h_i + s_i * h_{i-1}) / (h_{i-1} + h_i)
 
     # h, s range from i = 1 to n - 1
-    h = data[2:end] - data[1:end-1]
-    s = (cdf[2:end] - cdf[1:end-1]) ./ h
+    h[1:end-1] = data[2:end] - data[1:end-1]
+    s[1:end-1] = (cdf[2:end] - cdf[1:end-1]) ./ h[1:end-1]
     # Note that 'p' ranges from i = 2 to n - 1
-    p = (s[1:end-1] .* h[2:end] + s[2:end] .* h[1:end-1]) ./ (h[1:end-1] + h[2:end])
+    p[2:end-1] = (s[1:end-2] .* h[2:end-1] + s[2:end-1] .* h[1:end-2]) ./ (h[1:end-2] + h[2:end-1])
 
-    # Add padding to the data
-    h = append!(h, h[end])
-    s = append!(s, s[end])
-    p = append!([0.0], p, [0.0])
-
-    for i in 2:n-1  # @inbounds @simd 
+    for i in 2:n-1
         y_prime[i] = p[i]
 
         if s[i] * s[i-1] <= 0
@@ -67,10 +67,24 @@ function steffen_monotonic_interpolation(data::AbstractVector{<:Real}; sensitivi
     end
 
     # Endpoints
-    y_prime[1] = 3 / 2 * s[1] - y_prime[2] / 2
-    y_prime[end] = 3 / 2 * s[end-1] - y_prime[end-2] / 2
+    p[1] = s[1] * (1 + h[1] / (h[1] + h[2])) - s[2] * h[1] / (h[1] + h[2])
+    p[end] = s[end-1] * (1 + h[end-1] / (h[end-1] + h[end-2])) - s[end-2] * h[end-1] / (h[end-1] + h[end-2])
 
-    for i in eachindex(data)[1:end-1]  # @inbounds @simd 
+    y_prime[1] = p[1]
+    if p[1] * s[1] <= 0
+        y_prime[1] = 0.0
+    elseif abs(p[1]) > 2 * abs(s[1])
+        y_prime[1] = 2 * s[1]
+    end
+
+    y_prime[end] = p[end]
+    if p[end] * s[end-1] <= 0
+        y_prime[end] = 0.0
+    elseif abs(p[end]) > 2 * abs(s[end-1])
+        y_prime[end] = 2 * s[end-1]
+    end
+
+    for i in eachindex(data)[1:end-1]
         a[i] = (y_prime[i] + y_prime[i+1] - 2 * s[i]) / h[i]^2
         b[i] = (3 * s[i] - 2 * y_prime[i] - y_prime[i+1]) / h[i]
         c[i] = y_prime[i]
@@ -78,60 +92,52 @@ function steffen_monotonic_interpolation(data::AbstractVector{<:Real}; sensitivi
     end
 
     # Create interpolation function
-    itp(x) = begin
-        @assert data[1] <= x <= data[end]
-        i = searchsortedlast(data, x)
-        i = min(i, n - 1)
-        i = max(i, 1)
+    itp = isnothing(itp) ? fill(0.0, length(eval_x)) : itp
+    itp_gradient = isnothing(itp_gradient) ? fill(0.0, length(eval_x)) : itp_gradient
 
-        dx = x - data[i]
-        return a[i] * dx^3 + b[i] * dx^2 + c[i] * dx + d[i]
-    end
+    @assert all(data[1] .<= eval_x .<= data[end])
 
-    itp_gradient = x -> begin
-        @assert data[1] <= x <= data[end]
-        i = searchsortedlast(data, x)
-        i = min(i, n - 1)
-        i = max(i, 1)
+    for i in eachindex(eval_x)
+        idx = searchsortedlast(data, eval_x[i])
+        idx = min(idx, n - 1)
+        idx = max(idx, 1)
 
-        dx = x - data[i]
-        return 3 * a[i] * dx^2 + 2 * b[i] * dx + c[i]
+        dx = eval_x[i] - data[idx]
+        ai, bi, ci, di = a[idx], b[idx], c[idx], d[idx]
+        itp[i] += ai * dx^3 + bi * dx^2 + ci * dx + di
+        itp_gradient[i] += 3 * ai * dx^2 + 2 * bi * dx + ci
     end
 
     itp, itp_gradient
 end
 
-function steffen_monotonic_interpolation_bootstrap(data::AbstractVector{<:Real}; bootstrap_frac::Float64=0.01, num_samples::Int=50)
+function steffen_monotonic_interpolation_bootstrap(data::AbstractVector{<:Real}, eval_x::AbstractVector{<:Real}; bootstrap_frac::Float64=0.01, num_samples::Int=100)
     @assert 0 < bootstrap_frac <= 1
     @assert num_samples > 0
 
     n = length(data)
     data = sort(data)
-    itps = []
-    itp_gradients = []
+    itp = fill(0.0, size(eval_x)...)
+    itp_gradient = fill(0.0, size(eval_x))
     for _ in 1:num_samples
         idx = sample(2:n-1, floor(Int, n * bootstrap_frac), replace=true)
         bootstrap_data = append!([data[1]], data[idx], [data[end]])
-        itp, itp_gradient = steffen_monotonic_interpolation(bootstrap_data)
-        push!(itps, itp)
-        push!(itp_gradients, itp_gradient)
+        itp, itp_gradient = steffen_monotonic_interpolation(bootstrap_data, eval_x; itp=itp, itp_gradient=itp_gradient)
     end
 
-    itp(x) = mean([itp(x) for itp in itps])
-    itp_gradient(x) = mean([itp_gradient(x) for itp_gradient in itp_gradients])
-    itp, itp_gradient
+    itp / num_samples, itp_gradient / num_samples
 end
 
-function interpolate_data(data::AbstractVector{<:Real}, interp_name::String)
+function interpolate_data(data::AbstractVector{<:Real}, eval_x::AbstractVector{<:Real})
     """
         Interpolate the data using the specified interpolation method.
         We estimate the cdf of the data, interpolate that, then take the derivative.
     """
 
-    return steffen_monotonic_interpolation_bootstrap(data)
+    return steffen_monotonic_interpolation_bootstrap(data, eval_x)
 end
 
-function plot_bandwidths(interp_name)
+function plot_bandwidths()
     """
         Plot the kernel density estimate of the data x_i with bandwidth h.
     """
@@ -147,30 +153,25 @@ function plot_bandwidths(interp_name)
 
     cdf_plots = []
     pdf_plots = []
-    cfdm = central_fdm(20, 1; factor=1e3)
     for (name, dist) in distributions
         x = [eval(dist) for _ in 1:n]
-        interp, interp_gradient = interpolate_data(x, interp_name)
-
         x_min = minimum(x)
         x_max = maximum(x)
-        eval_x = collect(x_min:std(x)/100:x_max)
-        eval_y = interp_gradient.(eval_x)
+        eval_x = collect(x_min-1:std(x)/100:x_max+1)
+        interp, interp_gradient = interpolate_data(x, eval_x)
 
-        ppdf = plot(x=eval_x, y=eval_y, Geom.line, Guide.xlabel("X"), Guide.ylabel("Density"), Guide.title(name))
-        pcdf = plot(x=eval_x, y=interp.(eval_x), Geom.line, Guide.xlabel("X"), Guide.ylabel("CDF"), Guide.title(name))
-        push!(pdf_plots, ppdf)
-        push!(cdf_plots, pcdf)
+        # pcdf = plot(x=eval_x, y=interp, Geom.line, Guide.xlabel("X"), Guide.ylabel("Density"), Guide.title(name))
+        # ppdf = plot(x=eval_x, y=interp_gradient, Geom.line, Guide.xlabel("X"), Guide.ylabel("CDF"), Guide.title(name))
+        # push!(cdf_plots, pcdf)
+        # push!(pdf_plots, ppdf)
     end
 
-    dir = joinpath("plots", "cdf-interpolation")
-    isdir(dir) || mkpath(dir)
-    for (name, plots) in [("pdf", pdf_plots), ("cdf", cdf_plots)]
-        stack = gridstack(convert(Matrix{Plot}, reshape(plots, 2, 2)))
-        save_plot(stack, joinpath(dir, "$(interp_name)-$(name).pdf"))
-    end
+    # dir = joinpath("plots", "cdf-interpolation")
+    # isdir(dir) || mkpath(dir)
+    # for (name, plots) in [("pdf", pdf_plots), ("cdf", cdf_plots)]
+    #     stack = gridstack(convert(Matrix{Plot}, reshape(plots, 1, 1)))
+    #     save_plot(stack, joinpath(dir, "$(interp_name)-$(name).pdf"))
+    # end
 end
 
-for (name, interp) in interpolations
-    plot_bandwidths(name)
-end
+# plot_bandwidths()

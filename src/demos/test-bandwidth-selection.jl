@@ -41,12 +41,6 @@ const distributions = Dict(
         ))),
 )
 
-const smoothers = Dict(
-    # bootstrapping
-
-    # smoothing
-)
-
 function cdf(data::AbstractVector{<:Real})
     """
         Compute the empirical cdf of the data.
@@ -169,6 +163,7 @@ function plot_cdf_fits()
         end
 
         for (fname, plots) in [("$(kernel)-cdf", cdfplots), ("$(kernel)-h", hplots), ("$(kernel)-fit", fitplots), ("$(kernel)-pdf", pdfplots)]
+            println(fname, " ", length(plots))
             mat = convert(Matrix{Plot}, reshape(plots, n, m))
             composite = gridstack(mat)
     
