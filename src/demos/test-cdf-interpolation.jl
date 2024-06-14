@@ -84,12 +84,16 @@ function steffen_monotonic_interpolation(data::Vector{Float64}, eval_x::Vector{F
         y_prime[end] = 2 * s[end-1]
     end
 
-    for i in eachindex(data)[1:end-1]
-        a[i] = (y_prime[i] + y_prime[i+1] - 2 * s[i]) / h[i]^2
-        b[i] = (3 * s[i] - 2 * y_prime[i] - y_prime[i+1]) / h[i]
-        c[i] = y_prime[i]
-        d[i] = cdf[i]
-    end
+    @. a[1:end-1] = (y_prime[1:end-1] + y_prime[2:end] - 2 * s[1:end-1]) / h[1:end-1]^2
+    @. b[1:end-1] = (3 * s[1:end-1] - 2 * y_prime[1:end-1] - y_prime[2:end]) / h[1:end-1]
+    @. c[1:end-1] = y_prime[1:end-1]
+    @. d[1:end-1] = cdf[1:end-1]
+    # for i in eachindex(data)[1:end-1]
+    #     a[i] = (y_prime[i] + y_prime[i+1] - 2 * s[i]) / h[i]^2
+    #     b[i] = (3 * s[i] - 2 * y_prime[i] - y_prime[i+1]) / h[i]
+    #     c[i] = y_prime[i]
+    #     d[i] = cdf[i]
+    # end
 
     # Create interpolation function
     itp = isnothing(itp) ? fill(0.0, length(eval_x)) : itp
