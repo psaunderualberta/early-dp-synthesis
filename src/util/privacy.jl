@@ -24,8 +24,18 @@ function varepsilon(_::KDEPrivacyEstimator, tree, dataset::Dataset{T,L}, options
     sensitivity_col_idx = findfirst(item -> item == SENSITIVITY_COLUMN_NAME, varnames)
     sensitivity = dataset.X[sensitivity_col_idx, 1]  # The column is the same value
 
+    # Use random sampling to estimate varepsilon
+    eval_samples, complete = eval_tree_array(tree, dataset.X, options)
+    if !complete
+        return L(Inf)
+    end
+
+    return L(estimate_varepsilon_kde(prediction, eval_samples, sensitivity))
+end
+
+function estimate_varepsilon_kde(prediction::AbstractVector{Float64}, eval_samples::AbstractVector{Float64}, sensitivity::Float64)::Float64
     # Get original distributions
-    limits = (minimum(prediction) - sensitivity, maximum(prediction) + sensitivity)
+    limits = (minimum(prediction) - 2 * sensitivity, maximum(prediction) + 2 * sensitivity)
     model = kde(prediction; boundary=limits)
     model_ik = InterpKDE(model)
 
@@ -39,30 +49,24 @@ function varepsilon(_::KDEPrivacyEstimator, tree, dataset::Dataset{T,L}, options
 
     # Totally arbitrary choice for min & max of sampling
     # TODO: Since we're using kdes, we should probably make use of a distribution other than the gaussian
-    vareps = L(0)
-
-    # Use random sampling to estimate varepsilon
-    samples, complete = eval_tree_array(tree, dataset.X, options)
-    if !complete
-        return L(Inf)
-    end
+    vareps = 0
 
     # @assert complete "Evaluation of the tree '$(string_tree(tree, options))' failed. This should've been caught earlier."
-    for x in samples
+    for x in eval_samples
         model_prob = pdf(model_ik, x)
 
-        # This datapoint being impossible is not an issue, since our bounds might be 
-        # outside the min & max of the sampled data itself
-        if model_prob <= 0
-            continue
-        end
+        # # This datapoint being impossible is not an issue, since our bounds might be 
+        # # outside the min & max of the sampled data itself
+        # if model_prob <= 0
+        #     continue
+        # end
 
         # If this datapoint is impossible under neighbouring distributions,
         # then the privacy parameter (varepsilon) is infinite
         for sens_ik in sens_model_iks
             sens_prob = pdf(sens_ik, x)
             if sens_prob == 0
-                return L(Inf)
+                return Inf
             end
 
             diff = model_prob / sens_prob
@@ -70,7 +74,8 @@ function varepsilon(_::KDEPrivacyEstimator, tree, dataset::Dataset{T,L}, options
         end
     end
 
-    return L(log(vareps))
+    println("here")
+    return log(vareps)
 end
 
 ### Non Privacy Estimator
