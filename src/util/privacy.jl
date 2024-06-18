@@ -74,7 +74,6 @@ function estimate_varepsilon_kde(prediction::AbstractVector{Float64}, eval_sampl
         end
     end
 
-    println("here")
     return log(vareps)
 end
 
